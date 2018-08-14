@@ -1,0 +1,48 @@
+import scipy as sp
+import numpy as np
+from scipy import misc
+import matplotlib.pyplot as plt
+from sklearn.feature_extraction import image
+from sklearn.cluster import spectral_clustering
+
+#%matplotlib inline
+
+face = misc.face(gray = True)
+# Resize it to speed up the processing
+face = sp.misc.imresize(face, 0.20) / 255.
+
+# original face
+plt.figure(figsize=(16, 8))
+plt.imshow(face, cmap=plt.cm.gray)
+
+# Convert the image into a graph 
+graph = image.img_to_graph(face)
+
+# Take a decreasing function of the gradient: an exponential
+# The smaller beta is, the more independent the segmentation is of the
+# actual image. For beta=1, the segmentation is close to a voronoi
+##### NOTE: In mathematics, a Voronoi diagram is a partitioning of a plane 
+##### into regions based on distance to points in a specific subset of the plane.
+beta = 10
+eps = 1e-6
+graph.data = np.exp(-beta * graph.data / graph.data.std()) + eps
+
+# Apply spectral clustering for 5 segments
+N_REGIONS = 5
+
+labels = spectral_clustering(graph, n_clusters=N_REGIONS,
+                                 assign_labels='kmeans', random_state=1)
+
+# Reshape the label 
+labels = labels.reshape(face.shape)
+
+# Define the colors list to be used
+colors=['r','g','b','c','m']
+
+# plot the compressed image
+plt.figure(figsize=(16, 8))
+plt.imshow(face, cmap=plt.cm.gray)
+
+# Plot the contour region in the image
+for l in range(N_REGIONS):
+        plt.contour(labels == l,linewidths=1, colors=colors[l])
